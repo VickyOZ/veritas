@@ -48,6 +48,30 @@
                  verification-date: block-height,
                  verifier: tx-sender})))))
 
+;; Function to verify multiple users at once
+(define-public (bulk-verify-users (users (list 200 principal)) (status (string-ascii 20)))
+    (let ((is-verifier (default-to false (map-get? verifiers tx-sender))))
+        (begin
+            (asserts! is-verifier error-unauthorized)
+            (ok (map verify-single-user users)))))
+
+;; Helper function for bulk verification
+(define-private (verify-single-user (user principal))
+    (match (map-get? verified-users user)
+        prev-entry false
+        (map-set verified-users 
+            user 
+            {status: "VERIFIED",
+             verification-date: block-height,
+             verifier: tx-sender})))
+
+;; Function to check if verification has expired (e.g., after 365 days)
+(define-read-only (is-verification-expired (user principal))
+    (let ((user-info (map-get? verified-users user)))
+        (match user-info
+            verified-data (> (- block-height (get verification-date verified-data)) u365)
+            false)))
+
 ;; Read-only functions
 (define-read-only (get-user-status (user principal))
     (map-get? verified-users user))
