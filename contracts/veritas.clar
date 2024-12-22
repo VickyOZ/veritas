@@ -179,3 +179,23 @@
                 current-risk-level: (get risk-level (unwrap-panic user-data)),
                 is-frozen: (get is-frozen (unwrap-panic user-data))
             }))))
+
+;; New function to update user risk level
+(define-public (update-user-risk-level 
+    (user principal) 
+    (new-risk-level (string-ascii 10))
+    (reason (string-ascii 50)))
+    (let ((is-verifier (default-to false (map-get? verifiers tx-sender)))
+          (user-data (map-get? verified-users user)))
+        (begin
+            (asserts! is-verifier error-unauthorized)
+            (asserts! (is-some user-data) error-user-not-found)
+            (asserts! (is-valid-risk-level new-risk-level) error-invalid-input)
+            (asserts! (<= (len reason) u50) error-invalid-input)
+            (let ((updated-user-data (merge (unwrap-panic user-data) 
+                    {risk-level: new-risk-level})))
+                (ok (begin 
+                    (map-set verified-users user updated-user-data)
+                    (record-verification-action user 
+                        "UPDATED"
+                        reason)))))))
