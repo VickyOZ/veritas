@@ -164,3 +164,18 @@
 
 (define-read-only (get-last-action-id (user principal))
     (default-to u0 (map-get? user-action-counters user)))
+
+(define-read-only (get-user-verification-stats (user principal))
+    (let ((user-data (map-get? verified-users user))
+          (last-action-id (default-to u0 (map-get? user-action-counters user))))
+        (if (is-none user-data)
+            (err error-user-not-found)
+            (ok {
+                verification-age: (- block-height 
+                    (get verification-date (unwrap-panic user-data))),
+                total-actions: last-action-id,
+                is-expired: (is-verification-expired user),
+                current-status: (get status (unwrap-panic user-data)),
+                current-risk-level: (get risk-level (unwrap-panic user-data)),
+                is-frozen: (get is-frozen (unwrap-panic user-data))
+            }))))
