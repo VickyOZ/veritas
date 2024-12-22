@@ -1,36 +1,89 @@
 # Veritas - Decentralized KYC Verification System
 
-Veritas is a decentralized Know Your Customer (KYC) verification system built on the Stacks blockchain using Clarity smart contracts. It provides a transparent and secure way to manage user verifications while maintaining privacy and compliance.
+Veritas is a decentralized Know Your Customer (KYC) verification system built on the Stacks blockchain using Clarity smart contracts. It provides a transparent, secure, and compliant way to manage user verifications with comprehensive audit trails.
 
 ## Features
 
-- Decentralized KYC verification management
-- Multi-level verification system
-- Authorized verifier management
-- Transparent verification history
-- Privacy-preserving user data handling
+- **Advanced Verification Management**
+  - Multi-level user verification states (VERIFIED, PENDING, REJECTED)
+  - Risk-level assessment (LOW, STANDARD, HIGH)
+  - Account freeze functionality for suspicious activities
+  - Verification expiry tracking (365-block window)
+
+- **Robust Verifier System**
+  - Controlled verifier authorization
+  - Comprehensive action logging
+  - Bulk verification capabilities
+  - Granular permission management
+
+- **Audit & Compliance**
+  - Detailed verification history tracking
+  - Action-based event logging
+  - User statistics and metrics
+  - Risk level management
+  - Immutable audit trails
 
 ## Smart Contract Architecture
 
-The smart contract includes several key components:
+### Data Models
 
-### Data Storage
-- `verified-users`: Maps user principals to their verification status and history
-- `verifiers`: Maps authorized verifier addresses to their status
+```clarity
+;; User Verification Data
+{
+  status: (string-ascii 20),           // VERIFIED, PENDING, REJECTED
+  verification-date: uint,             // Block height of verification
+  verifier: principal,                 // Address of verifier
+  risk-level: (string-ascii 10),       // LOW, STANDARD, HIGH
+  is-frozen: bool                      // Account freeze status
+}
 
-### Key Functions
+;; Verification History Entry
+{
+  action: (string-ascii 20),           // Type of action performed
+  timestamp: uint,                     // Block height of action
+  verifier: principal,                 // Address of verifier
+  details: (string-ascii 50)           // Additional context
+}
+```
 
-1. Verifier Management
-   - `add-verifier`: Add new authorized verifiers
-   - `remove-verifier`: Remove verifier access
+### Core Functions
 
-2. User Verification
-   - `verify-user`: Perform initial user verification
-   - `update-user-status`: Update existing user verification status
+#### Verifier Management
+```clarity
+(define-public (add-verifier (verifier principal)))
+(define-public (remove-verifier (verifier principal)))
+```
 
-3. Status Checking
-   - `get-user-status`: Query user verification status
-   - `is-verifier`: Check if an address is an authorized verifier
+#### User Verification
+```clarity
+(define-public (verify-user (user principal) 
+                           (status (string-ascii 20)) 
+                           (risk-level (string-ascii 10))))
+
+(define-public (update-user-status (user principal) 
+                                 (new-status (string-ascii 20))))
+
+(define-public (bulk-verify-users (users (list 200 principal)) 
+                                (status (string-ascii 20))))
+```
+
+#### Risk Management
+```clarity
+(define-public (update-user-risk-level (user principal) 
+                                     (new-risk-level (string-ascii 10))
+                                     (reason (string-ascii 50))))
+
+(define-public (set-account-freeze-status (user principal) 
+                                        (freeze-status bool) 
+                                        (reason (string-ascii 50))))
+```
+
+#### Audit & Reporting
+```clarity
+(define-read-only (get-user-verification-stats (user principal)))
+(define-read-only (get-verification-history (user principal) (action-id uint)))
+(define-read-only (is-verification-expired (user principal)))
+```
 
 ## Getting Started
 
@@ -57,36 +110,46 @@ npm install
 clarinet contract deploy
 ```
 
-### Usage
+### Usage Examples
 
-#### Adding a Verifier
+#### Adding a New Verifier
 ```clarity
-(contract-call? .veritas add-verifier 'VERIFIER_ADDRESS)
+;; Only contract owner can add verifiers
+(contract-call? .veritas add-verifier 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7)
 ```
 
 #### Verifying a User
 ```clarity
-(contract-call? .veritas verify-user 'USER_ADDRESS "VERIFIED")
+;; Must be called by an authorized verifier
+(contract-call? .veritas verify-user 
+    'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7 
+    "VERIFIED" 
+    "STANDARD")
 ```
 
-#### Checking User Status
+#### Updating Risk Level
 ```clarity
-(contract-call? .veritas get-user-status 'USER_ADDRESS)
+(contract-call? .veritas update-user-risk-level
+    'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7
+    "HIGH"
+    "Suspicious transaction patterns detected")
+```
+
+#### Freezing an Account
+```clarity
+(contract-call? .veritas set-account-freeze-status
+    'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7
+    true
+    "Multiple failed verification attempts")
 ```
 
 ## Security Considerations
 
-- Only authorized verifiers can perform verifications
-- Contract owner has exclusive rights to manage verifiers
-- All verification records are immutable and transparent
-- User data privacy is maintained through minimal on-chain storage
-
-## Testing
-
-Run the test suite:
-```bash
-clarinet test
-```
+- **Access Control**: Strict role-based access control for verifiers
+- **Data Validation**: Comprehensive input validation for all functions
+- **Audit Trail**: Immutable record of all verification actions
+- **Privacy**: Minimal on-chain data storage with focus on verification status
+- **Risk Management**: Multi-level risk assessment and account freezing capabilities
 
 ## Contributing
 
@@ -95,4 +158,3 @@ clarinet test
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
